@@ -3,14 +3,17 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.List;
+import java.util.StringTokenizer;
 
 public class TP2 {
     private static InputReader in;
     private static PrintWriter out;
     private static CircularDoublyLinkedList<Kelompok> kelompoks;
     private static CircularDoublyLinkedList<Kelompok>.TeamNode teamNodeSekarang;
-    private static CircularDoublyLinkedList<Kelompok>.TeamNode teamWithPenjoki;
+    private static CircularDoublyLinkedList<Kelompok>.TeamNode penjokiNode = null;
     private static int counter = 1;
 
     public static void main(String[] args) {
@@ -18,7 +21,7 @@ public class TP2 {
         out = new PrintWriter(System.out);
 
         // Menentukan jumlah tim
-        int M = in.nextInteger(); // Jumlah tim
+        int M = in.nextInteger(); // Jumlah query yang akan dijalankan
         kelompoks = new CircularDoublyLinkedList<>();
 
         // Menentukan jumlah peserta untuk masing-masing tim
@@ -49,18 +52,36 @@ public class TP2 {
             kelompoks.addLast(kelompok);
         }
 
-        // Menentukan tim dengan total poin terendah untuk penempatan penjoki
-        teamWithPenjoki = findPenjokiTeam(null); // Tidak ada tim yang dikecualikan
-        if (teamWithPenjoki != null) {
-            teamWithPenjoki.data.setPenjoki(true);
-        }
-
+        // Inisialisasi tim yang diawasi oleh Sofita
         // Inisialisasi tim yang diawasi oleh Sofita
         if (M > 0) {
-            teamNodeSekarang = kelompoks.getHead(); // Mulai dari tim pertama
+            teamNodeSekarang = kelompoks.getHead(); // Sofita starts supervising team 1
+
+            // Find the team with the lowest total points
+            CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = kelompoks.getHead();
+            Kelompok timTerbawah = null;
+            penjokiNode = null; // Reset penjokiNode
+
+            for (int i = 0; i < kelompoks.size(); i++) {
+                if (tempNode != teamNodeSekarang) {
+                    if (timTerbawah == null
+                            || tempNode.data.getTotalPoinKelompok() < timTerbawah.getTotalPoinKelompok()) {
+                        timTerbawah = tempNode.data;
+                        penjokiNode = tempNode; // Update penjokiNode to the new lowest team
+                    }
+                }
+                tempNode = tempNode.next;
+            }
+
+            // Place the 'Penjoki' on the team with the lowest total points
+            if (penjokiNode != null) {
+                penjokiNode.data.setPenjoki(true);
+            }
         } else {
-            teamNodeSekarang = null; // Tidak ada tim
+            teamNodeSekarang = null; // No teams exist
         }
+
+        int idTimSelanjutnya = M + 1;
 
         // Membaca Jumlah Query
         int Q = in.nextInteger();
@@ -71,219 +92,243 @@ public class TP2 {
             if (query.equals("A")) {
                 int jumlahPesertaBaru = in.nextInteger();
                 if (teamNodeSekarang != null) {
-                    Kelompok currentTeam = teamNodeSekarang.data;
+                    Kelompok timSekarang = teamNodeSekarang.data;
                     for (int p = 0; p < jumlahPesertaBaru; p++) {
-                        Peserta newParticipant = new Peserta(counter++, 3);
-                        currentTeam.addPeserta(newParticipant);
+                        Peserta PartisipanBaru = new Peserta(counter++, 3);
+                        timSekarang.addPeserta(PartisipanBaru);
                     }
-                    out.println(currentTeam.getPesertas().getSize());
+                    out.println(timSekarang.getPesertas().getSize());
                 } else {
                     out.println("-1");
                 }
-            } 
+            }
 
-            else if (query.equals("M")) {
-                String arah = in.next();
-                if (kelompoks.size() > 0) {
-                    // If Sofita is null, stay null
-                    if (teamNodeSekarang == null) {
-                        out.println("-1");
-                        continue;
+            else if (query.equals("B")) {
+                // implement the logic query
+            } else if (query.equals("M")) {
+                String direction = in.next();
+                if (teamNodeSekarang != null) {
+                    if (direction.equals("L")) {
+                        teamNodeSekarang = teamNodeSekarang.prev;
+                    } else if (direction.equals("R")) {
+                        teamNodeSekarang = teamNodeSekarang.next;
                     }
-            
-                    // Move to the next non-eliminated team
-                    CircularDoublyLinkedList<Kelompok>.TeamNode nextTeamNode = findNextNonEliminatedTeam(teamNodeSekarang, arah);
-            
-                    // If there are no non-eliminated teams, Sofita remains null
-                    if (nextTeamNode == null) {
-                        teamNodeSekarang = null;
-                        out.println("-1");
-                        continue;
-                    }
-            
-                    Kelompok nextTeam = nextTeamNode.data;
-            
-                    // Check if the destination team has Penjoki
-                    if (nextTeam.hasPenjoki()) {
-                        // Attempt to move Penjoki to another team
-                        Set<CircularDoublyLinkedList<Kelompok>.TeamNode> excludeTeams = new HashSet<>();
-                        excludeTeams.add(nextTeamNode); // Exclude the team where Penjoki is now (and where Sofita is moving to)
-                        excludeTeams.add(teamNodeSekarang); // Exclude current team of Sofita (before moving)
-                        CircularDoublyLinkedList<Kelompok>.TeamNode newPenjokiTeam = findPenjokiTeam(excludeTeams);
-            
-                        // Move Penjoki to new team if possible
-                        if (newPenjokiTeam != null) {
-                            nextTeam.setPenjoki(false);
-                            newPenjokiTeam.data.setPenjoki(true);
-                            teamWithPenjoki = newPenjokiTeam;
-                        } else {
-                            // Penjoki cannot be moved; remains in the team
-                            // Penalties will be applied below
-                        }
-            
-                        // Apply penalties regardless of whether Penjoki was moved
-                        nextTeam.incrementCatchCount();
-                        int catches = nextTeam.getCatchCount();
-            
-                        if (catches == 1) {
-                            nextTeam.removeTopKPeserta(3);
-                        } else if (catches == 2) {
-                            nextTeam.setAllPesertaPoins(1);
-                        } else if (catches == 3) {
-                            // Eliminate the team
-                            nextTeam.setEliminated(true);
-                            kelompoks.remove(nextTeamNode);
-                            nextTeam.setPenjoki(false);
-            
-                            // Reassign Penjoki to the lowest scoring team
-                            if (kelompoks.size() > 0) {
-                                CircularDoublyLinkedList<Kelompok>.TeamNode newPenjokiTeamAfterElimination = findPenjokiTeam(null);
-                                if (newPenjokiTeamAfterElimination != null) {
-                                    newPenjokiTeamAfterElimination.data.setPenjoki(true);
-                                    teamWithPenjoki = newPenjokiTeamAfterElimination;
-                                } else {
-                                    teamWithPenjoki = null;
+                    Kelompok timSekarang = teamNodeSekarang.data;
+                    if (timSekarang.hasPenjoki()) {
+                        // Remove Penjoki from current team
+                        timSekarang.setPenjoki(false);
+
+                        // Find the team with the lowest total points not supervised by Sofita
+                        CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = kelompoks.getHead();
+                        CircularDoublyLinkedList<Kelompok>.TeamNode nodeTimTerendah = null;
+                        int totalPoinTerendah = Integer.MAX_VALUE;
+
+                        do {
+                            if (tempNode != teamNodeSekarang && tempNode.data != null) {
+                                int poinTim = tempNode.data.getTotalPoinKelompok();
+                                if (poinTim < totalPoinTerendah) {
+                                    totalPoinTerendah = poinTim;
+                                    nodeTimTerendah = tempNode;
                                 }
-                            } else {
-                                teamWithPenjoki = null;
                             }
-            
-                            // Reset catch count
-                            nextTeam.resetCatchCount();
+                            tempNode = tempNode.next;
+                        } while (tempNode != kelompoks.getHead());
+
+                        // Move Penjoki to the new team
+                        if (nodeTimTerendah != null) {
+                            penjokiNode = nodeTimTerendah;
+                            penjokiNode.data.setPenjoki(true);
+                        } else {
+                            // No other team available for Penjoki
+                            penjokiNode = null;
                         }
-            
-                        // Check if team has less than 7 members after penalties
-                        if (!nextTeam.isEliminated() && nextTeam.getPesertas().getSize() < 7) {
+
+                        // Apply penalties to the current team
+                        timSekarang.incrementPenjokiTertangkap();
+                        int pointerTertangkap = timSekarang.getPenjokiTertangkap();
+                        if (pointerTertangkap == 1) {
+                            timSekarang.getPesertas().menghapusPesertaPoinTinggi(3);
+                        } else if (pointerTertangkap == 2) {
+                            timSekarang.getPesertas().setSemuaPoinJadiSatu();
+                        } else if (pointerTertangkap >= 3) {
                             // Eliminate the team
-                            nextTeam.setEliminated(true);
-                            kelompoks.remove(nextTeamNode);
-            
-                            // If the team had Penjoki, move Penjoki
-                            if (nextTeam.hasPenjoki()) {
-                                nextTeam.setPenjoki(false);
-                                if (kelompoks.size() > 0) {
-                                    CircularDoublyLinkedList<Kelompok>.TeamNode newPenjokiTeamAfterElimination = findPenjokiTeam(null);
-                                    if (newPenjokiTeamAfterElimination != null) {
-                                        newPenjokiTeamAfterElimination.data.setPenjoki(true);
-                                        teamWithPenjoki = newPenjokiTeamAfterElimination;
-                                    } else {
-                                        teamWithPenjoki = null;
-                                    }
-                                } else {
-                                    teamWithPenjoki = null;
-                                }
+                            CircularDoublyLinkedList<Kelompok>.TeamNode toRemove = teamNodeSekarang;
+                            // Move Sofita to the team with highest total points
+                            teamNodeSekarang = getTimDenganPoinTertinggi();
+                            kelompoks.remove(toRemove);
+                            if (kelompoks.size() == 0) {
+                                teamNodeSekarang = null;
+                            }
+                        }
+
+                        // After penalties, check if team needs to be eliminated due to low participant
+                        // count
+                        if (timSekarang.getPesertas().getSize() < 7) {
+                            // Remove the team from the list
+                            CircularDoublyLinkedList<Kelompok>.TeamNode toRemove = teamNodeSekarang;
+                            // Move Sofita to the team with highest total points
+                            teamNodeSekarang = getTimDenganPoinTertinggi();
+                            kelompoks.remove(toRemove);
+                            if (kelompoks.size() == 0) {
+                                teamNodeSekarang = null;
                             }
                         }
                     }
-            
-                    // Move Sofita to the new team
-                    teamNodeSekarang = nextTeamNode;
-            
-                    // If the team was eliminated, move Sofita to the team with highest total points
-                    if (nextTeam.isEliminated()) {
-                        if (kelompoks.size() > 0) {
-                            teamNodeSekarang = findHighestTeam();
-                        } else {
-                            teamNodeSekarang = null;
-                        }
-                    }
-            
+
                     // Output the team ID or -1 if Sofita is not observing any team
                     if (teamNodeSekarang != null) {
                         out.println(teamNodeSekarang.data.getTeamId());
                     } else {
                         out.println("-1");
                     }
-                } else {
-                    out.println("-1");
                 }
-            }
-
-            else if (query.equals("J")) {
-                String arah = in.next();
-                if (teamWithPenjoki != null && kelompoks.size() > 0) {
-                    CircularDoublyLinkedList<Kelompok>.TeamNode targetTeam = null;
-
-                    if (arah.equals("L")) {
-                        targetTeam = teamWithPenjoki.prev;
-                    } else if (arah.equals("R")) {
-                        targetTeam = teamWithPenjoki.next;
-                    } else {
-                        // Arah tidak valid
-                        out.println("-1");
-                        continue;
-                    }
-
-                    // Cek apakah tim tujuan sedang diawasi oleh Sofita
-                    if (targetTeam == teamNodeSekarang) {
-                        // Penjoki tetap di tim saat ini
-                        // Tidak ada perubahan pada teamWithPenjoki
-                    } else {
-                        // Penjoki berpindah ke tim tujuan
-                        // Update flag penjoki di tim lama dan tim baru
-                        teamWithPenjoki.data.setPenjoki(false);
-                        targetTeam.data.setPenjoki(true);
-                        teamWithPenjoki = targetTeam;
-                    }
-
-                    // Cetak ID tim penjoki sekarang
-                    out.println(teamWithPenjoki.data.getTeamId());
-                } else {
-                    // Tidak ada tim atau penjoki
-                    out.println("-1");
-                }
-            }
-
-            else if (query.equals("U")) {
-                // Implementasi Query U
-                if (teamNodeSekarang != null) {
-                    Kelompok currentTeam = teamNodeSekarang.data;
-                    List<Peserta> pesertaList = currentTeam.getPesertas().getAllPeserta();
-
-                    Set<Integer> uniquePoints = new HashSet<>();
-                    for (Peserta p : pesertaList) {
-                        uniquePoints.add(p.getPoins());
-                    }
-                    out.println(uniquePoints.size());
-                } else {
-                    // Sofita tidak mengawasi tim manapun
-                    out.println("-1");
-                }
-            } 
-
-            else if (query.equals("B")) {
-                // Implementasi Query B
-            }
-            else if (query.equals("T")) {
+            } else if (query.equals("T")) {
                 int senderId = in.nextInteger();
                 int receiverId = in.nextInteger();
                 int points = in.nextInteger();
-                // Implementasi Query T
-            } 
-            else if (query.equals("G")) {
+                // Implement the logic for query "T"
+            } else if (query.equals("G")) {
                 String position = in.next();
-                // Implementasi Query G
-            } 
-            else if (query.equals("V")) {
+
+                // Create a new team with the next available team ID
+                Kelompok newTeam = new Kelompok(idTimSelanjutnya++);
+
+                // Add 7 new partisipan with initial points of 1
+                for (int j = 0; j < 7; j++) {
+                    Peserta PartisipanBaru = new Peserta(counter++, 1);
+                    newTeam.addPeserta(PartisipanBaru);
+                }
+
+                if (teamNodeSekarang == null) {
+                    // If no teams exist, add the new team and set it as the current team
+                    kelompoks.addLast(newTeam);
+                    teamNodeSekarang = kelompoks.getHead();
+                } else {
+                    if (position.equals("L")) {
+                        // Insert the new team to the left of the current team
+                        kelompoks.addBefore(teamNodeSekarang, newTeam);
+                    } else if (position.equals("R")) {
+                        // Insert the new team to the right of the current team
+                        kelompoks.addAfter(teamNodeSekarang, newTeam);
+                    }
+                }
+
+                // Output the ID of the newly created team
+                out.println(newTeam.getTeamId());
+            } else if (query.equals("V")) {
                 int id1 = in.nextInteger();
                 int id2 = in.nextInteger();
                 int teamId = in.nextInteger();
                 int result = in.nextInteger();
-                // Implementasi Query V
-            } 
-            else if (query.equals("E")) {
+                // Implement the logic for query "V"
+            } else if (query.equals("E")) {
                 int minPoints = in.nextInteger();
-                // Implementasi Query E
-            } 
-            else if (query.equals("R")) {
-                // Implementasi Query R
-            } 
-        }
+                int teamsEliminated = 0;
 
-        out.close(); // Jangan lupa menutup PrintWriter
+                // List to hold the team nodes to be removed
+                List<CircularDoublyLinkedList<Kelompok>.TeamNode> timAkanDihapus = new ArrayList<>();
+
+                // First, check which teams need to be eliminated
+                CircularDoublyLinkedList<Kelompok>.TeamNode nodeSekarang = kelompoks.getHead();
+                if (nodeSekarang != null) {
+                    do {
+                        Kelompok timSekarang = nodeSekarang.data;
+                        if (timSekarang.getTotalPoinKelompok() < minPoints) {
+                            timAkanDihapus.add(nodeSekarang);
+                        }
+                        nodeSekarang = nodeSekarang.next;
+                    } while (nodeSekarang != kelompoks.getHead());
+                }
+
+                // Flags to check if Sofita or Penjoki need to be moved
+                boolean timSofitaTerleliminasi = false;
+                boolean timPenjokiTereliminasi = false;
+                boolean penjokiPindahKarnaPaksaan = false; // To track if Penjoki moved due to conflict
+
+                // Now, eliminate the teams
+                for (CircularDoublyLinkedList<Kelompok>.TeamNode nodeToRemove : timAkanDihapus) {
+                    // Check if the team is being supervised by Sofita
+                    if (teamNodeSekarang == nodeToRemove) {
+                        timSofitaTerleliminasi = true;
+                        teamNodeSekarang = null; // Will be updated later
+                    }
+
+                    // Check if the team has the Penjoki
+                    if (penjokiNode == nodeToRemove) {
+                        timPenjokiTereliminasi = true;
+                        penjokiNode.data.setPenjoki(false); // Remove Penjoki from current team
+                        penjokiNode = null; // Will be updated later
+                    }
+
+                    // Remove the team from the list
+                    kelompoks.remove(nodeToRemove);
+                    teamsEliminated++;
+                }
+
+                // If Sofita's team was eliminated, move her to the team with highest total
+                // points
+                if (timSofitaTerleliminasi && kelompoks.size() > 0) {
+                    teamNodeSekarang = getTimDenganPoinTertinggi();
+                }
+
+                // If Penjoki's team was eliminated, move him to the team with lowest total
+                // points
+                if (timPenjokiTereliminasi && kelompoks.size() > 0 && !penjokiPindahKarnaPaksaan) {
+                    // Exclude the team being supervised by Sofita
+                    CircularDoublyLinkedList<Kelompok>.TeamNode nodeTimTerendah = getTimDenganPoinTerendah(
+                            teamNodeSekarang);
+                    if (nodeTimTerendah != null) {
+                        penjokiNode = nodeTimTerendah;
+                        penjokiNode.data.setPenjoki(true);
+                    }
+                }
+
+                // Output the number of teams eliminated
+                out.println(teamsEliminated);
+            } else if (query.equals("U")) {
+                if (teamNodeSekarang != null) {
+                    Kelompok timSekarang = teamNodeSekarang.data;
+                    // Get all partisipan
+                    List<Peserta> partisipan = timSekarang.getPesertas().getSemuaPartisipan();
+                    // Use a HashSet to store unique point values
+                    HashSet<Integer> poinUnik = new HashSet<>();
+                    for (Peserta p : partisipan) {
+                        poinUnik.add(p.getPoin());
+                    }
+                    out.println(poinUnik.size());
+                } else {
+                    out.println("-1"); // Sofita is not supervising any team
+                }
+            } else if (query.equals("R")) {
+                // Implement the logic for query "R"
+            } else if (query.equals("J")) {
+                String direction = in.next();
+                if (penjokiNode != null) {
+                    CircularDoublyLinkedList<Kelompok>.TeamNode targetNode = null;
+                    if (direction.equals("L")) {
+                        targetNode = penjokiNode.prev;
+                    } else if (direction.equals("R")) {
+                        targetNode = penjokiNode.next;
+                    }
+
+                    // Check if the target team is not being observed by Sofita and is not
+                    // eliminated
+                    if (targetNode != null && targetNode != teamNodeSekarang && targetNode.data != null) {
+                        // Move Penjoki to the new team
+                        penjokiNode.data.setPenjoki(false); // Remove Penjoki from current team
+                        penjokiNode = targetNode;
+                        penjokiNode.data.setPenjoki(true); // Place Penjoki on new team
+                    }
+                    // Output the ID of the team where Penjoki is currently helping
+                    out.println(penjokiNode.data.getTeamId());
+                } else {
+                    out.println("-1"); // Penjoki is not helping any team
+                }
+            }
+        }
+        out.close();
     }
 
-    // Kelas Peserta
     static class Peserta {
         private int id;
         private int poins;
@@ -297,12 +342,8 @@ public class TP2 {
             return id;
         }
 
-        public int getPoins() {
+        public int getPoin() {
             return poins;
-        }
-
-        public void setPoins(int p) {
-            this.poins = p;
         }
 
         public void addPoins(int p) {
@@ -319,19 +360,17 @@ public class TP2 {
         }
     }
 
-    // Kelas Kelompok
-    static class Kelompok {
+    static class Kelompok implements Comparable<Kelompok> {
         private int teamId;
         private PesertaBST pesertas;
         private boolean hasPenjoki;
-        private int catchCount;
-        private boolean isEliminated;
+        private int penjokiCaughtCount;
 
         public Kelompok(int teamId) {
             this.teamId = teamId;
             this.pesertas = new PesertaBST();
             this.hasPenjoki = false;
-            this.catchCount = 0;
+            this.penjokiCaughtCount = 0;
         }
 
         public int getTeamId() {
@@ -342,6 +381,14 @@ public class TP2 {
             return pesertas;
         }
 
+        public void addPeserta(Peserta p) {
+            pesertas.insert(p);
+        }
+
+        public int getTotalPoinKelompok() {
+            return pesertas.getTotalPoinKelompok();
+        }
+
         public boolean hasPenjoki() {
             return hasPenjoki;
         }
@@ -350,32 +397,12 @@ public class TP2 {
             this.hasPenjoki = hasPenjoki;
         }
 
-        public int getCatchCount() {
-            return catchCount;
+        public int getPenjokiTertangkap() {
+            return penjokiCaughtCount;
         }
 
-        public void incrementCatchCount() {
-            this.catchCount++;
-        }
-
-        public void resetCatchCount() {
-            this.catchCount = 0;
-        }
-
-        public void addPeserta(Peserta p) {
-            pesertas.insert(p);
-        }
-
-        public int getTotalPoints() {
-            return pesertas.getTotalPoints();
-        }
-
-        public boolean isEliminated() {
-            return isEliminated;
-        }
-    
-        public void setEliminated(boolean eliminated) {
-            isEliminated = eliminated;
+        public void incrementPenjokiTertangkap() {
+            this.penjokiCaughtCount++;
         }
 
         @Override
@@ -383,21 +410,34 @@ public class TP2 {
             return "Team{id=" + teamId + ", pesertas=" + pesertas.getSize() + "}";
         }
 
-        // Menghapus k peserta dengan poin terbesar
-        public void removeTopKPeserta(int k) {
-            List<Peserta> topKPeserta = pesertas.getTopKPeserta(k);
-            for(Peserta p : topKPeserta) {
-                pesertas.removePeserta(p.getId());
+        @Override
+        public int compareTo(Kelompok other) {
+            // Compare total points (higher is better)
+            if (this.getTotalPoinKelompok() > other.getTotalPoinKelompok()) {
+                return -1; // 'this' is higher
+            } else if (this.getTotalPoinKelompok() < other.getTotalPoinKelompok()) {
+                return 1; // 'this' is lower
+            } else {
+                // Total points are equal, compare number of members (fewer is better)
+                if (this.getPesertas().getSize() < other.getPesertas().getSize()) {
+                    return -1; // 'this' has fewer members, so it's higher
+                } else if (this.getPesertas().getSize() > other.getPesertas().getSize()) {
+                    return 1; // 'this' has more members, so it's lower
+                } else {
+                    // Number of members is equal, compare team IDs (lower ID is better)
+                    if (this.getTeamId() < other.getTeamId()) {
+                        return -1; // 'this' has lower ID, so it's higher
+                    } else if (this.getTeamId() > other.getTeamId()) {
+                        return 1; // 'this' has higher ID, so it's lower
+                    } else {
+                        return 0; // All attributes are equal
+                    }
+                }
             }
-        }
-
-        // Mengubah semua peserta' poin menjadi nilai tertentu
-        public void setAllPesertaPoins(int newPoins) {
-            pesertas.setAllPoins(newPoins);
         }
     }
 
-    // AVL Tree untuk Peserta
+    // AVL untuk peserta
     static class PesertaBST {
         private NodePeserta root;
         private int size;
@@ -411,66 +451,65 @@ public class TP2 {
 
         // Menambah peserta ke AVL Tree
         public void insert(Peserta p) {
-            root = insertRec(root, p);
+            root = rekursifAVL(root, p);
         }
 
-        private NodePeserta insertRec(NodePeserta node, Peserta p) {
+        private NodePeserta rekursifAVL(NodePeserta node, Peserta p) {
             if (node == null) {
                 node = new NodePeserta(p);
                 size++;
-                totalPoints += p.getPoins();
+                totalPoints += p.getPoin();
                 return node;
             }
             if (p.getId() < node.peserta.getId()) {
-                node.left = insertRec(node.left, p);
+                node.left = rekursifAVL(node.left, p);
             } else if (p.getId() > node.peserta.getId()) {
-                node.right = insertRec(node.right, p);
+                node.right = rekursifAVL(node.right, p);
             } else {
                 // Jika ID sama, tidak ditambahkan (ID unik)
-                return node; 
+                return node;
             }
-            
-            // Update tinggi Node
-            node.height = 1 + Math.max(getHeight(node.left), getHeight(node.right));
 
-            // Balance factor
-            int balance = getBalance(node);
+            // Tinggi Node
+            node.height = 1 + Math.max(getTinggiTree(node.left), getTinggiTree(node.right));
 
-            // Balancing tree
-            // Case 1: Left Left
-            if (balance > 1 && p.getId() < node.left.peserta.getId()) {
-                return rightRotate(node);
+            // Seimbang factor
+            int Seimbang = getTreeSeimbang(node);
+
+            // Balancing tree LeftLeft(LL)
+            if (Seimbang > 1 && p.getId() < node.left.peserta.getId()) {
+                return rotasiTreeKeKanan(node);
             }
 
             // Case 2: Right Right
-            if (balance < -1 && p.getId() > node.right.peserta.getId()) {
-                return leftRotate(node);
+            if (Seimbang < -1 && p.getId() > node.right.peserta.getId()) {
+                return rotasiTreeKeKiri(node);
             }
 
             // Case 3: Left Right
-            if (balance > 1 && p.getId() > node.left.peserta.getId()) {
-                node.left = leftRotate(node.left);
-                return rightRotate(node);
+            if (Seimbang > 1 && p.getId() > node.left.peserta.getId()) {
+                node.left = rotasiTreeKeKiri(node.left);
+                return rotasiTreeKeKanan(node);
             }
 
             // Case 4: Right Left
-            if (balance < -1 && p.getId() < node.right.peserta.getId()) {
-                node.right = rightRotate(node.right);
-                return leftRotate(node);
+            if (Seimbang < -1 && p.getId() < node.right.peserta.getId()) {
+                node.right = rotasiTreeKeKanan(node.right);
+                return rotasiTreeKeKiri(node);
             }
 
             return node;
         }
 
-        private int getHeight(NodePeserta node) {
+        private int getTinggiTree(NodePeserta node) {
             return node == null ? 0 : node.height;
         }
 
-        private int getBalance(NodePeserta node) {
-            return node == null ? 0 : getHeight(node.left) - getHeight(node.right);
+        private int getTreeSeimbang(NodePeserta node) {
+            return node == null ? 0 : getTinggiTree(node.left) - getTinggiTree(node.right);
         }
 
-        private NodePeserta rightRotate(NodePeserta y) {
+        private NodePeserta rotasiTreeKeKanan(NodePeserta y) {
             NodePeserta x = y.left;
             NodePeserta T2 = x.right;
 
@@ -479,14 +518,14 @@ public class TP2 {
             y.left = T2;
 
             // Update heights
-            y.height = Math.max(getHeight(y.left), getHeight(y.right)) + 1;
-            x.height = Math.max(getHeight(x.left), getHeight(x.right)) + 1;
+            y.height = Math.max(getTinggiTree(y.left), getTinggiTree(y.right)) + 1;
+            x.height = Math.max(getTinggiTree(x.left), getTinggiTree(x.right)) + 1;
 
             // Return new root
             return x;
         }
 
-        private NodePeserta leftRotate(NodePeserta x) {
+        private NodePeserta rotasiTreeKeKiri(NodePeserta x) {
             NodePeserta y = x.right;
             NodePeserta T2 = y.left;
 
@@ -495,23 +534,26 @@ public class TP2 {
             x.right = T2;
 
             // Update heights
-            x.height = Math.max(getHeight(x.left), getHeight(x.right)) + 1;
-            y.height = Math.max(getHeight(y.left), getHeight(y.right)) + 1;
+            x.height = Math.max(getTinggiTree(x.left), getTinggiTree(x.right)) + 1;
+            y.height = Math.max(getTinggiTree(y.left), getTinggiTree(y.right)) + 1;
 
             // Return new root
             return y;
         }
 
         // Mencari peserta menurut ID
-        public Peserta search(int id) {
-            return searchRec(root, id);
+        public Peserta cari(int id) {
+            return rekursifUntukMencari(root, id);
         }
 
-        private Peserta searchRec(NodePeserta node, int id) {
-            if (node == null) return null;
-            if (id == node.peserta.getId()) return node.peserta;
-            if (id < node.peserta.getId()) return searchRec(node.left, id);
-            return searchRec(node.right, id);
+        private Peserta rekursifUntukMencari(NodePeserta node, int id) {
+            if (node == null)
+                return null;
+            if (id == node.peserta.getId())
+                return node.peserta;
+            if (id < node.peserta.getId())
+                return rekursifUntukMencari(node.left, id);
+            return rekursifUntukMencari(node.right, id);
         }
 
         // Untuk mendapat ukuran BST
@@ -520,149 +562,26 @@ public class TP2 {
         }
 
         // Mengambil total poin semua peserta dalam kelompok
-        public int getTotalPoints() {
+        public int getTotalPoinKelompok() {
             return totalPoints;
         }
 
-        // Traversal inorder untuk mendapatkan semua data peserta dalam urutan tertentu (id)
+        // Traversal inorder untuk mendapatkan semua data peserta dalam urutan tertentu
+        // (id)
         public void inorderTraversal() {
-            inorderRec(root); // memulai traversal dari akar
+            inOrderRekursif(root); // memlai traversal dari akar
         }
 
-        // Rekursif untuk traversal
-        private void inorderRec(NodePeserta node) {
-            if (node != null) {
-                inorderRec(node.left);
-                System.out.println(node.peserta);
-                inorderRec(node.right);
+        // rekursif untuk start traversal dari akar
+        private void inOrderRekursif(NodePeserta node) {
+            if (root != null) {
+                inOrderRekursif(root.left);
+                System.out.println(root.peserta);
+                inOrderRekursif(root.right);
             }
         }
 
-        // Mengumpulkan semua peserta
-        public List<Peserta> getAllPeserta() {
-            List<Peserta> allPeserta = new ArrayList<>();
-            inorderCollect(root, allPeserta);
-            return allPeserta;
-        }
-
-        private void inorderCollect(NodePeserta node, List<Peserta> list) {
-            if(node != null) {
-                inorderCollect(node.left, list);
-                list.add(node.peserta);
-                inorderCollect(node.right, list);
-            }
-        }
-
-        // Mengambil k peserta dengan poin terbesar
-        public List<Peserta> getTopKPeserta(int k) {
-            List<Peserta> allPeserta = getAllPeserta();
-            allPeserta.sort((a, b) -> b.getPoins() - a.getPoins());
-            return allPeserta.subList(0, Math.min(k, allPeserta.size()));
-        }
-
-        // Menghapus peserta berdasarkan ID
-        public void removePeserta(int id) {
-            root = removeRec(root, id);
-        }
-
-        private NodePeserta removeRec(NodePeserta node, int id) {
-            if (node == null) return null;
-            if (id < node.peserta.getId()) {
-                node.left = removeRec(node.left, id);
-            } else if (id > node.peserta.getId()) {
-                node.right = removeRec(node.right, id);
-            } else {
-                // Node to be deleted
-                if (node.left == null || node.right == null) {
-                    NodePeserta temp = null;
-                    if (node.left != null) temp = node.left;
-                    else temp = node.right;
-
-                    if (temp == null) { // No child
-                        temp = node;
-                        node = null;
-                    }
-                    else { // One child
-                        node = temp;
-                    }
-                }
-                else {
-                    // Node dengan dua anak: Get inorder successor (smallest in the right subtree)
-                    NodePeserta temp = minValueNode(node.right);
-                    node.peserta = temp.peserta;
-                    node.right = removeRec(node.right, temp.peserta.getId());
-                }
-            }
-
-            // If the tree had only one node
-            if (node == null) return node;
-
-            // Update height
-            node.height = 1 + Math.max(getHeight(node.left), getHeight(node.right));
-
-            // Get balance factor
-            int balance = getBalance(node);
-
-            // Balance the tree
-            // Left Left
-            if (balance > 1 && getBalance(node.left) >= 0) {
-                return rightRotate(node);
-            }
-
-            // Left Right
-            if (balance > 1 && getBalance(node.left) < 0) {
-                node.left = leftRotate(node.left);
-                return rightRotate(node);
-            }
-
-            // Right Right
-            if (balance < -1 && getBalance(node.right) <= 0) {
-                return leftRotate(node);
-            }
-
-            // Right Left
-            if (balance < -1 && getBalance(node.right) > 0) {
-                node.right = rightRotate(node.right);
-                return leftRotate(node);
-            }
-
-            return node;
-        }
-
-        private NodePeserta minValueNode(NodePeserta node) {
-            NodePeserta current = node;
-            while (current.left != null) {
-                current = current.left;
-            }
-            return current;
-        }
-
-        // Mengubah semua peserta' poin menjadi nilai tertentu
-        public void setAllPoins(int newPoins) {
-            setAllPoinsRec(root, newPoins);
-        }
-
-        private void setAllPoinsRec(NodePeserta node, int newPoins) {
-            if(node != null) {
-                setAllPoinsRec(node.left, newPoins);
-                totalPoints -= node.peserta.getPoins();
-                node.peserta.setPoins(newPoins);
-                totalPoints += newPoins;
-                setAllPoinsRec(node.right, newPoins);
-            }
-        }
-
-        // Mendapatkan peserta dengan poin terbesar
-        public Peserta getMaxPeserta() {
-            if (root == null) return null;
-            NodePeserta current = root;
-            while (current.right != null) {
-                current = current.right;
-            }
-            return current.peserta;
-        }
-
-        // Kelas Node AVL Tree
+        // Node BST, nyimpen peserta(id, poin)
         private class NodePeserta {
             Peserta peserta;
             NodePeserta left, right;
@@ -674,11 +593,132 @@ public class TP2 {
                 height = 1;
             }
         }
+
+        public void menghapusPesertaPoinTinggi(int k) {
+            List<Peserta> partisipan = getSemuaPartisipan();
+            // Sort partisipan by points in descending order using insertion sort
+            insertionSort(partisipan);
+            for (int i = 0; i < k && i < partisipan.size(); i++) {
+                Peserta p = partisipan.get(i);
+                remove(p.getId());
+            }
+        }
+
+        // Custom insertion sort algorithm
+        private void insertionSort(List<Peserta> list) {
+            for (int i = 1; i < list.size(); i++) {
+                Peserta key = list.get(i);
+                int j = i - 1;
+
+                // Move elements of list[0..i-1], that are less than key, to one position ahead
+                while (j >= 0 && list.get(j).getPoin() < key.getPoin()) {
+                    list.set(j + 1, list.get(j));
+                    j = j - 1;
+                }
+                list.set(j + 1, key);
+            }
+        }
+
+        public void setSemuaPoinJadiSatu() {
+            setSemuaPoinJadiSatuRec(root);
+            // Update totalPoints
+            totalPoints = size * 1;
+        }
+
+        private void setSemuaPoinJadiSatuRec(NodePeserta node) {
+            if (node != null) {
+                setSemuaPoinJadiSatuRec(node.left);
+                totalPoints -= node.peserta.getPoin() - 1; // Adjust totalPoints
+                node.peserta.poins = 1;
+                setSemuaPoinJadiSatuRec(node.right);
+            }
+        }
+
+        public List<Peserta> getSemuaPartisipan() {
+            List<Peserta> partisipan = new ArrayList<>();
+            getSemuaPartisipanRec(root, partisipan);
+            return partisipan;
+        }
+
+        private void getSemuaPartisipanRec(NodePeserta node, List<Peserta> partisipan) {
+            if (node != null) {
+                getSemuaPartisipanRec(node.left, partisipan);
+                partisipan.add(node.peserta);
+                getSemuaPartisipanRec(node.right, partisipan);
+            }
+        }
+
+        public void remove(int id) {
+            root = removeRekursif(root, id);
+        }
+
+        private NodePeserta removeRekursif(NodePeserta node, int id) {
+            if (node == null) {
+                return node;
+            }
+            if (id < node.peserta.getId()) {
+                node.left = removeRekursif(node.left, id);
+            } else if (id > node.peserta.getId()) {
+                node.right = removeRekursif(node.right, id);
+            } else {
+                // Node to be deleted
+                totalPoints -= node.peserta.getPoin();
+                size--;
+                if (node.left == null || node.right == null) {
+                    NodePeserta temp = (node.left != null) ? node.left : node.right;
+                    if (temp == null) {
+                        node = null;
+                    } else {
+                        node = temp;
+                    }
+                } else {
+                    // Node with two children
+                    NodePeserta temp = minValueNode(node.right);
+                    node.peserta = temp.peserta;
+                    node.right = removeRekursif(node.right, temp.peserta.getId());
+                }
+            }
+            if (node == null) {
+                return node;
+            }
+
+            // Update height
+            node.height = 1 + Math.max(getTinggiTree(node.left), getTinggiTree(node.right));
+
+            // Seimbang the node
+            int Seimbang = getTreeSeimbang(node);
+
+            // LL
+            if (Seimbang > 1 && getTreeSeimbang(node.left) >= 0) {
+                return rotasiTreeKeKanan(node);
+            }
+            // LR
+            if (Seimbang > 1 && getTreeSeimbang(node.left) < 0) {
+                node.left = rotasiTreeKeKiri(node.left);
+                return rotasiTreeKeKanan(node);
+            }
+            // RR
+            if (Seimbang < -1 && getTreeSeimbang(node.right) <= 0) {
+                return rotasiTreeKeKiri(node);
+            }
+            // RL
+            if (Seimbang < -1 && getTreeSeimbang(node.right) > 0) {
+                node.right = rotasiTreeKeKanan(node.right);
+                return rotasiTreeKeKiri(node);
+            }
+            return node;
+        }
+
+        private NodePeserta minValueNode(NodePeserta node) {
+            NodePeserta current = node;
+            while (current.left != null) {
+                current = current.left;
+            }
+            return current;
+        }
     }
 
-    // Kelas Circular Doubly Linked List (CDLL)
     static class CircularDoublyLinkedList<T> {
-        // Kelas inner non-static agar dapat mengakses tipe parameter T
         class TeamNode {
             T data;
             TeamNode prev, next;
@@ -690,7 +730,7 @@ public class TP2 {
         }
 
         private TeamNode kepala;
-        private TeamNode ekor; // Menyimpan referensi ke ekor untuk akses O(1)
+        private TeamNode ekor;
         private int size;
 
         public CircularDoublyLinkedList() {
@@ -714,6 +754,59 @@ public class TP2 {
             size++;
         }
 
+        public void addAfter(TeamNode node, T data) {
+            if (node == null) {
+                return;
+            }
+            TeamNode newNode = new TeamNode(data);
+
+            newNode.next = node.next;
+            newNode.prev = node;
+            node.next.prev = newNode;
+            node.next = newNode;
+
+            if (node == ekor) {
+                ekor = newNode;
+            }
+            size++;
+        }
+
+        public void addBefore(TeamNode node, T data) {
+            if (node == null) {
+                return;
+            }
+            TeamNode newNode = new TeamNode(data);
+
+            newNode.prev = node.prev;
+            newNode.next = node;
+            node.prev.next = newNode;
+            node.prev = newNode;
+
+            if (node == kepala) {
+                kepala = newNode;
+            }
+            size++;
+        }
+
+        public void remove(TeamNode node) {
+            if (node == null || size == 0) {
+                return;
+            }
+            if (size == 1 && node == kepala) {
+                kepala = ekor = null;
+            } else {
+                node.prev.next = node.next;
+                node.next.prev = node.prev;
+                if (node == kepala) {
+                    kepala = node.next;
+                }
+                if (node == ekor) {
+                    ekor = node.prev;
+                }
+            }
+            size--;
+        }
+
         public TeamNode getHead() {
             return kepala;
         }
@@ -722,34 +815,13 @@ public class TP2 {
             return size;
         }
 
-        // Menghapus sebuah node dari CDLL
-        public boolean remove(TeamNode node) {
-            if (kepala == null || node == null) return false;
-
-            if (kepala == node && ekor == node) {
-                kepala = ekor = null;
-            }
-            else {
-                node.prev.next = node.next;
-                node.next.prev = node.prev;
-                if (kepala == node) {
-                    kepala = node.next;
-                }
-                if (ekor == node) {
-                    ekor = node.prev;
-                }
-            }
-            size--;
-            return true;
-        }
-
         public void display() {
             if (kepala == null) {
                 System.out.println("List Kosong");
                 return;
             }
             TeamNode current = kepala;
-            for(int i = 0; i < size; i++) {
+            for (int i = 0; i < size; i++) {
                 System.out.print(current.data + " ");
                 current = current.next;
             }
@@ -762,7 +834,47 @@ public class TP2 {
         }
     }
 
-    // Kelas InputReader untuk efisiensi pembacaan input
+    private static CircularDoublyLinkedList<Kelompok>.TeamNode getTimDenganPoinTertinggi() {
+        if (kelompoks.size() == 0)
+            return null;
+        CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = kelompoks.getHead();
+        CircularDoublyLinkedList<Kelompok>.TeamNode highestTeamNode = tempNode;
+        int highestTotalPoints = tempNode.data.getTotalPoinKelompok();
+        tempNode = tempNode.next;
+
+        while (tempNode != kelompoks.getHead()) {
+            int poinTim = tempNode.data.getTotalPoinKelompok();
+            if (poinTim > highestTotalPoints) {
+                highestTotalPoints = poinTim;
+                highestTeamNode = tempNode;
+            }
+            tempNode = tempNode.next;
+        }
+        return highestTeamNode;
+    }
+
+    private static CircularDoublyLinkedList<Kelompok>.TeamNode getTimDenganPoinTerendah(
+            CircularDoublyLinkedList<Kelompok>.TeamNode excludeNode) {
+        if (kelompoks.size() == 0)
+            return null;
+        CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = kelompoks.getHead();
+        CircularDoublyLinkedList<Kelompok>.TeamNode nodeTimTerendah = null;
+        int totalPoinTerendah = Integer.MAX_VALUE;
+
+        do {
+            if (tempNode != excludeNode) {
+                int poinTim = tempNode.data.getTotalPoinKelompok();
+                if (poinTim < totalPoinTerendah) {
+                    totalPoinTerendah = poinTim;
+                    nodeTimTerendah = tempNode;
+                }
+            }
+            tempNode = tempNode.next;
+        } while (tempNode != kelompoks.getHead());
+
+        return nodeTimTerendah;
+    }
+
     static class InputReader {
         public BufferedReader reader;
         public StringTokenizer tokenizer;
@@ -791,63 +903,4 @@ public class TP2 {
             return Integer.parseInt(next());
         }
     }
-
-    private static CircularDoublyLinkedList<Kelompok>.TeamNode findPenjokiTeam(Set<CircularDoublyLinkedList<Kelompok>.TeamNode> exclude) {
-        if (kelompoks.size() == 0) return null;
-        
-        CircularDoublyLinkedList<Kelompok>.TeamNode minTeam = null;
-        int minPoints = Integer.MAX_VALUE;
-        CircularDoublyLinkedList<Kelompok>.TeamNode current = kelompoks.getHead();
-        
-        for (int i = 0; i < kelompoks.size(); i++) {
-            if ((exclude == null || !exclude.contains(current)) && !current.data.isEliminated()) {
-                Kelompok team = current.data;
-                if (team.getTotalPoints() < minPoints) {
-                    minPoints = team.getTotalPoints();
-                    minTeam = current;
-                }
-            }
-            current = current.next;
-        }
-        return minTeam;
-    }
-
-    private static CircularDoublyLinkedList<Kelompok>.TeamNode findHighestTeam() {
-        if (kelompoks.size() == 0) return null;
-    
-        CircularDoublyLinkedList<Kelompok>.TeamNode maxTeam = null;
-        int maxPoints = Integer.MIN_VALUE;
-        CircularDoublyLinkedList<Kelompok>.TeamNode current = kelompoks.getHead();
-    
-        for (int i = 0; i < kelompoks.size(); i++) {
-            if (!current.data.isEliminated()) {
-                Kelompok team = current.data;
-                if (team.getTotalPoints() > maxPoints) {
-                    maxPoints = team.getTotalPoints();
-                    maxTeam = current;
-                }
-            }
-            current = current.next;
-        }
-        return maxTeam;
-    }
-
-    private static CircularDoublyLinkedList<Kelompok>.TeamNode findNextNonEliminatedTeam(CircularDoublyLinkedList<Kelompok>.TeamNode startNode, String direction) {
-        CircularDoublyLinkedList<Kelompok>.TeamNode currentNode = startNode;
-        do {
-            if (direction.equals("L")) {
-                currentNode = currentNode.prev;
-            } else if (direction.equals("R")) {
-                currentNode = currentNode.next;
-            } else {
-                return null;
-            }
-        } while (currentNode.data.isEliminated() && currentNode != startNode);
-        if (currentNode.data.isEliminated()) {
-            return null; // Semua tim telah dieliminasi
-        } else {
-            return currentNode;
-        }
-    }
-    
 }
