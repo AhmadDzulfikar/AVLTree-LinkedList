@@ -355,7 +355,7 @@ public class TP2Coba2 {
         }
     }
 
-    static class Kelompok {
+    static class Kelompok implements Comparable<Kelompok> {
         private int teamId;
         private PesertaBST pesertas;
         private boolean hasPenjoki;
@@ -403,6 +403,32 @@ public class TP2Coba2 {
         @Override
         public String toString() {
             return "Team{id=" + teamId + ", pesertas=" + pesertas.getSize() + "}";
+        }
+
+        @Override
+        public int compareTo(Kelompok other) {
+            // Compare total points (higher is better)
+            if (this.getTotalPoints() > other.getTotalPoints()) {
+                return -1; // 'this' is higher
+            } else if (this.getTotalPoints() < other.getTotalPoints()) {
+                return 1; // 'this' is lower
+            } else {
+                // Total points are equal, compare number of members (fewer is better)
+                if (this.getPesertas().getSize() < other.getPesertas().getSize()) {
+                    return -1; // 'this' has fewer members, so it's higher
+                } else if (this.getPesertas().getSize() > other.getPesertas().getSize()) {
+                    return 1; // 'this' has more members, so it's lower
+                } else {
+                    // Number of members is equal, compare team IDs (lower ID is better)
+                    if (this.getTeamId() < other.getTeamId()) {
+                        return -1; // 'this' has lower ID, so it's higher
+                    } else if (this.getTeamId() > other.getTeamId()) {
+                        return 1; // 'this' has higher ID, so it's lower
+                    } else {
+                        return 0; // All attributes are equal
+                    }
+                }
+            }
         }
     }
 
