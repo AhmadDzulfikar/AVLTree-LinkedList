@@ -4,6 +4,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.PrintWriter;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.StringTokenizer;
 
@@ -12,6 +13,7 @@ public class TP2Coba2 {
     private static PrintWriter out;
     private static CircularDoublyLinkedList<Kelompok> kelompoks;
     private static CircularDoublyLinkedList<Kelompok>.TeamNode teamNodeSekarang;
+    private static CircularDoublyLinkedList<Kelompok>.TeamNode penjokiNode = null;
     private static int counter = 1;
 
     public static void main(String[] args) {
@@ -51,22 +53,24 @@ public class TP2Coba2 {
         }
 
         // Inisialisasi tim yang diawasi oleh Sofita
+        // Inisialisasi tim yang diawasi oleh Sofita
         if (M > 0) {
             teamNodeSekarang = kelompoks.getHead(); // Sofita starts supervising team 1
-        
+
             // Find the team with the lowest total points
             CircularDoublyLinkedList<Kelompok>.TeamNode currentTeamNode = kelompoks.getHead();
             Kelompok lowestTeam = currentTeamNode.data;
             CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = currentTeamNode.next;
-        
+            penjokiNode = currentTeamNode; // Initialize penjokiNode
+
             for (int i = 1; i < kelompoks.size(); i++) {
-                Kelompok team = tempNode.data;
-                if (team.getTotalPoints() < lowestTeam.getTotalPoints()) {
-                    lowestTeam = team;
+                if (tempNode.data.getTotalPoints() < lowestTeam.getTotalPoints()) {
+                    lowestTeam = tempNode.data;
+                    penjokiNode = tempNode; // Update penjokiNode to the new lowest team
                 }
                 tempNode = tempNode.next;
             }
-        
+
             // Place the 'Penjoki' on the team with the lowest total points
             lowestTeam.setPenjoki(true);
         } else {
@@ -105,22 +109,61 @@ public class TP2Coba2 {
                     } else if (direction.equals("R")) {
                         teamNodeSekarang = teamNodeSekarang.next;
                     }
-                    // After moving, check if the current team has the 'Penjoki'
                     Kelompok currentTeam = teamNodeSekarang.data;
                     if (currentTeam.hasPenjoki()) {
+                        // Remove Penjoki from current team
+                        currentTeam.setPenjoki(false);
+
+                        // Find the team with the lowest total points not supervised by Sofita
+                        CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = kelompoks.getHead();
+                        CircularDoublyLinkedList<Kelompok>.TeamNode lowestTeamNode = null;
+                        int lowestTotalPoints = Integer.MAX_VALUE;
+
+                        do {
+                            if (tempNode != teamNodeSekarang && tempNode.data != null) {
+                                int teamPoints = tempNode.data.getTotalPoints();
+                                if (teamPoints < lowestTotalPoints) {
+                                    lowestTotalPoints = teamPoints;
+                                    lowestTeamNode = tempNode;
+                                }
+                            }
+                            tempNode = tempNode.next;
+                        } while (tempNode != kelompoks.getHead());
+
+                        // Move Penjoki to the new team
+                        if (lowestTeamNode != null) {
+                            penjokiNode = lowestTeamNode;
+                            penjokiNode.data.setPenjoki(true);
+                        } else {
+                            // No other team available for Penjoki
+                            penjokiNode = null;
+                        }
+
+                        // Apply penalties to the current team
                         currentTeam.incrementPenjokiCaughtCount();
                         int caughtCount = currentTeam.getPenjokiCaughtCount();
                         if (caughtCount == 1) {
-                            // First time caught: Remove three participants with highest points
                             currentTeam.getPesertas().removeTopKParticipants(3);
                         } else if (caughtCount == 2) {
-                            // Second time caught: Set all participants' points to 1
                             currentTeam.getPesertas().setAllPointsToOne();
                         } else if (caughtCount >= 3) {
-                            // Third time caught: Eliminate the team
+                            // Eliminate the team
                             CircularDoublyLinkedList<Kelompok>.TeamNode toRemove = teamNodeSekarang;
-                            // Move 'Sofita' to the next team
-                            teamNodeSekarang = teamNodeSekarang.next;
+                            // Move Sofita to the team with highest total points
+                            teamNodeSekarang = getTeamWithHighestPoints();
+                            kelompoks.remove(toRemove);
+                            if (kelompoks.size() == 0) {
+                                teamNodeSekarang = null;
+                            }
+                        }
+
+                        // After penalties, check if team needs to be eliminated due to low participant
+                        // count
+                        if (currentTeam.getPesertas().getSize() < 7) {
+                            // Remove the team from the list
+                            CircularDoublyLinkedList<Kelompok>.TeamNode toRemove = teamNodeSekarang;
+                            // Move Sofita to the team with highest total points
+                            teamNodeSekarang = getTeamWithHighestPoints();
                             kelompoks.remove(toRemove);
                             if (kelompoks.size() == 0) {
                                 teamNodeSekarang = null;
@@ -176,14 +219,106 @@ public class TP2Coba2 {
                 // Implement the logic for query "V"
             } else if (query.equals("E")) {
                 int minPoints = in.nextInteger();
-                // Implement the logic for query "E"
+                int teamsEliminated = 0;
+            
+                // List to hold the team nodes to be removed
+                List<CircularDoublyLinkedList<Kelompok>.TeamNode> teamsToRemove = new ArrayList<>();
+            
+                // First, check which teams need to be eliminated
+                CircularDoublyLinkedList<Kelompok>.TeamNode currentNode = kelompoks.getHead();
+                if (currentNode != null) {
+                    do {
+                        Kelompok currentTeam = currentNode.data;
+                        if (currentTeam.getTotalPoints() < minPoints) {
+                            teamsToRemove.add(currentNode);
+                        }
+                        currentNode = currentNode.next;
+                    } while (currentNode != kelompoks.getHead());
+                }
+            
+                // Flags to check if Sofita or Penjoki need to be moved
+                boolean sofitaTeamEliminated = false;
+                boolean penjokiTeamEliminated = false;
+                boolean penjokiMovedDueToConflict = false; // To track if Penjoki moved due to conflict
+            
+                // Now, eliminate the teams
+                for (CircularDoublyLinkedList<Kelompok>.TeamNode nodeToRemove : teamsToRemove) {
+                    // Check if the team is being supervised by Sofita
+                    if (teamNodeSekarang == nodeToRemove) {
+                        sofitaTeamEliminated = true;
+                        teamNodeSekarang = null; // Will be updated later
+                    }
+            
+                    // Check if the team has the Penjoki
+                    if (penjokiNode == nodeToRemove) {
+                        penjokiTeamEliminated = true;
+                        penjokiNode.data.setPenjoki(false); // Remove Penjoki from current team
+                        penjokiNode = null; // Will be updated later
+                    }
+            
+                    // Remove the team from the list
+                    kelompoks.remove(nodeToRemove);
+                    teamsEliminated++;
+                }
+            
+                // If Sofita's team was eliminated, move her to the team with highest total points
+                if (sofitaTeamEliminated && kelompoks.size() > 0) {
+                    teamNodeSekarang = getTeamWithHighestPoints();
+                }
+            
+                // If Penjoki's team was eliminated, move him to the team with lowest total points
+                if (penjokiTeamEliminated && kelompoks.size() > 0 && !penjokiMovedDueToConflict) {
+                    // Exclude the team being supervised by Sofita
+                    CircularDoublyLinkedList<Kelompok>.TeamNode lowestTeamNode = getTeamWithLowestPointsExcluding(teamNodeSekarang);
+                    if (lowestTeamNode != null) {
+                        penjokiNode = lowestTeamNode;
+                        penjokiNode.data.setPenjoki(true);
+                    }
+                }
+            
+                // Output the number of teams eliminated
+                out.println(teamsEliminated);
             } else if (query.equals("U")) {
-                // Implement the logic for query "U"
+                if (teamNodeSekarang != null) {
+                    Kelompok currentTeam = teamNodeSekarang.data;
+                    // Get all participants
+                    List<Peserta> participants = currentTeam.getPesertas().getAllParticipants();
+                    // Use a HashSet to store unique point values
+                    HashSet<Integer> uniquePoints = new HashSet<>();
+                    for (Peserta p : participants) {
+                        uniquePoints.add(p.getPoins());
+                    }
+                    out.println(uniquePoints.size());
+                } else {
+                    out.println("-1"); // Sofita is not supervising any team
+                }
             } else if (query.equals("R")) {
                 // Implement the logic for query "R"
             } else if (query.equals("J")) {
-                // Implement the logic for query "J"
+                String direction = in.next();
+                if (penjokiNode != null) {
+                    CircularDoublyLinkedList<Kelompok>.TeamNode targetNode = null;
+                    if (direction.equals("L")) {
+                        targetNode = penjokiNode.prev;
+                    } else if (direction.equals("R")) {
+                        targetNode = penjokiNode.next;
+                    }
+
+                    // Check if the target team is not being observed by Sofita and is not
+                    // eliminated
+                    if (targetNode != null && targetNode != teamNodeSekarang && targetNode.data != null) {
+                        // Move Penjoki to the new team
+                        penjokiNode.data.setPenjoki(false); // Remove Penjoki from current team
+                        penjokiNode = targetNode;
+                        penjokiNode.data.setPenjoki(true); // Place Penjoki on new team
+                    }
+                    // Output the ID of the team where Penjoki is currently helping
+                    out.println(penjokiNode.data.getTeamId());
+                } else {
+                    out.println("-1"); // Penjoki is not helping any team
+                }
             }
+
         }
 
         out.close();
@@ -437,13 +572,13 @@ public class TP2Coba2 {
                 remove(p.getId());
             }
         }
-    
+
         // Custom insertion sort algorithm
         private void insertionSort(List<Peserta> list) {
             for (int i = 1; i < list.size(); i++) {
                 Peserta key = list.get(i);
                 int j = i - 1;
-    
+
                 // Move elements of list[0..i-1], that are less than key, to one position ahead
                 while (j >= 0 && list.get(j).getPoins() < key.getPoins()) {
                     list.set(j + 1, list.get(j));
@@ -556,22 +691,22 @@ public class TP2Coba2 {
         class TeamNode {
             T data;
             TeamNode prev, next;
-    
+
             public TeamNode(T data) {
                 this.data = data;
                 prev = next = null;
             }
         }
-    
+
         private TeamNode kepala;
         private TeamNode ekor;
         private int size;
-    
+
         public CircularDoublyLinkedList() {
             kepala = ekor = null;
             size = 0;
         }
-    
+
         public void addLast(T data) {
             TeamNode newNode = new TeamNode(data);
             if (kepala == null) {
@@ -587,41 +722,41 @@ public class TP2Coba2 {
             }
             size++;
         }
-    
+
         public void addAfter(TeamNode node, T data) {
             if (node == null) {
                 return;
             }
             TeamNode newNode = new TeamNode(data);
-    
+
             newNode.next = node.next;
             newNode.prev = node;
             node.next.prev = newNode;
             node.next = newNode;
-    
+
             if (node == ekor) {
                 ekor = newNode;
             }
             size++;
         }
-    
+
         public void addBefore(TeamNode node, T data) {
             if (node == null) {
                 return;
             }
             TeamNode newNode = new TeamNode(data);
-    
+
             newNode.prev = node.prev;
             newNode.next = node;
             node.prev.next = newNode;
             node.prev = newNode;
-    
+
             if (node == kepala) {
                 kepala = newNode;
             }
             size++;
         }
-    
+
         public void remove(TeamNode node) {
             if (node == null || size == 0) {
                 return;
@@ -640,15 +775,15 @@ public class TP2Coba2 {
             }
             size--;
         }
-    
+
         public TeamNode getHead() {
             return kepala;
         }
-    
+
         public int size() {
             return size;
         }
-    
+
         public void display() {
             if (kepala == null) {
                 System.out.println("List Kosong");
@@ -661,11 +796,49 @@ public class TP2Coba2 {
             }
             System.out.println();
         }
-    
+
         // Getter untuk ekor jika diperlukan
         public TeamNode getTail() {
             return ekor;
         }
+    }
+
+    private static CircularDoublyLinkedList<Kelompok>.TeamNode getTeamWithHighestPoints() {
+        if (kelompoks.size() == 0) return null;
+        CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = kelompoks.getHead();
+        CircularDoublyLinkedList<Kelompok>.TeamNode highestTeamNode = tempNode;
+        int highestTotalPoints = tempNode.data.getTotalPoints();
+        tempNode = tempNode.next;
+    
+        while (tempNode != kelompoks.getHead()) {
+            int teamPoints = tempNode.data.getTotalPoints();
+            if (teamPoints > highestTotalPoints) {
+                highestTotalPoints = teamPoints;
+                highestTeamNode = tempNode;
+            }
+            tempNode = tempNode.next;
+        }
+        return highestTeamNode;
+    }
+    
+    private static CircularDoublyLinkedList<Kelompok>.TeamNode getTeamWithLowestPointsExcluding(CircularDoublyLinkedList<Kelompok>.TeamNode excludeNode) {
+        if (kelompoks.size() == 0) return null;
+        CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = kelompoks.getHead();
+        CircularDoublyLinkedList<Kelompok>.TeamNode lowestTeamNode = null;
+        int lowestTotalPoints = Integer.MAX_VALUE;
+    
+        do {
+            if (tempNode != excludeNode) {
+                int teamPoints = tempNode.data.getTotalPoints();
+                if (teamPoints < lowestTotalPoints) {
+                    lowestTotalPoints = teamPoints;
+                    lowestTeamNode = tempNode;
+                }
+            }
+            tempNode = tempNode.next;
+        } while (tempNode != kelompoks.getHead());
+    
+        return lowestTeamNode;
     }
 
     static class InputReader {
