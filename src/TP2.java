@@ -182,50 +182,52 @@ public class TP2 {
                         out.println("-1");
                     }
                 }
-            } else if (query.equals("T")) {
+            } 
+            else if (query.equals("T")) {
                 int idPesertaPengirim = in.nextInteger();
                 int idPesertaPenerima = in.nextInteger();
                 int jumlah_poin = in.nextInteger();
-            
+
                 // Validasi Sofita
                 if (teamNodeSekarang == null) {
                     out.println("-1");
                     continue;
                 }
-            
+
                 Kelompok timSekarang = teamNodeSekarang.data;
-            
+
                 // Cari peserta pengirim dan penerima
                 Peserta pengirim = timSekarang.getPesertas().cari(idPesertaPengirim);
                 Peserta penerima = timSekarang.getPesertas().cari(idPesertaPenerima);
-            
+
                 // Validasi peserta
                 if (pengirim == null || penerima == null) {
                     out.println("-1");
                     continue;
                 }
-            
+
                 // Validasi jumlah poin
                 if (jumlah_poin >= pengirim.getPoin()) {
                     out.println("-1");
                     continue;
                 }
-            
+
                 // Hapus pengirim dan penerima dari AVL
                 timSekarang.getPesertas().remove(idPesertaPengirim);
                 timSekarang.getPesertas().remove(idPesertaPenerima);
-            
+
                 // Update poin pengirim dan penerima
                 pengirim.subtractPoins(jumlah_poin);
                 penerima.addPoins(jumlah_poin);
-            
+
                 // Masukkan kembali ke AVL
                 timSekarang.getPesertas().insert(pengirim);
                 timSekarang.getPesertas().insert(penerima);
-            
+
                 // Cetak poin pengirim dan penerima
                 out.println(pengirim.getPoin() + " " + penerima.getPoin());
-            } else if (query.equals("G")) {
+            } 
+            else if (query.equals("G")) {
                 String position = in.next();
 
                 // Create a new team with the next available team ID
@@ -253,25 +255,27 @@ public class TP2 {
 
                 // Output the ID of the newly created team
                 out.println(newTeam.getTeamId());
-            } else if (query.equals("V")) {
+            }
+
+            else if (query.equals("V")) {
                 int id_peserta1 = in.nextInteger();
                 int id_peserta2 = in.nextInteger();
                 int teamId = in.nextInteger();
                 int result = in.nextInteger();
-            
+
                 // Step 1: Validate Participants and Teams
                 if (teamNodeSekarang == null) {
                     out.println("-1");
                     continue;
                 }
-            
+
                 Kelompok teamSofita = teamNodeSekarang.data;
                 Peserta player1 = teamSofita.getPesertas().cari(id_peserta1);
                 if (player1 == null) {
                     out.println("-1");
                     continue;
                 }
-            
+
                 // Find the team with ID teamId
                 CircularDoublyLinkedList<Kelompok>.TeamNode nodeTimLawan = kelompoks.getHead();
                 boolean timDidapati = false;
@@ -282,23 +286,23 @@ public class TP2 {
                     }
                     nodeTimLawan = nodeTimLawan.next;
                 } while (nodeTimLawan != kelompoks.getHead());
-            
+
                 if (!timDidapati) {
                     out.println("-1");
                     continue;
                 }
-            
+
                 Kelompok timLawan_V = nodeTimLawan.data;
                 Peserta player2 = timLawan_V.getPesertas().cari(id_peserta2);
                 if (player2 == null) {
                     out.println("-1");
                     continue;
                 }
-            
+
                 // Step 2: Remove Participants from AVL Trees
                 teamSofita.getPesertas().remove(id_peserta1);
                 timLawan_V.getPesertas().remove(id_peserta2);
-            
+
                 // Step 3: Update Points Based on Result
                 if (result == 0) {
                     player1.addPoins(1);
@@ -306,32 +310,34 @@ public class TP2 {
                 } else if (result == 1) {
                     player1.addPoins(3);
                     player2.subtractPoins(3);
-                    if (player2.getPoin() < 0) player2.poins = 0; // Ensure non-negative points
+                    if (player2.getPoin() < 0)
+                        player2.poins = 0; // Ensure non-negative points
                 } else if (result == -1) {
                     player2.addPoins(3);
                     player1.subtractPoins(3);
-                    if (player1.getPoin() < 0) player1.poins = 0; // Ensure non-negative points
+                    if (player1.getPoin() < 0)
+                        player1.poins = 0; // Ensure non-negative points
                 }
-            
+
                 // Step 4: Reinsert Participants into AVL Trees
                 teamSofita.getPesertas().insert(player1);
                 timLawan_V.getPesertas().insert(player2);
-            
+
                 // Update total points in teams
                 teamSofita.updateTotalPoints();
                 timLawan_V.updateTotalPoints();
-            
+
                 // Step 5: Check for Team Eliminations
                 List<CircularDoublyLinkedList<Kelompok>.TeamNode> timAkanDieliminasi = new ArrayList<>();
                 boolean timSofitaTereliminasi = false;
                 boolean timLawanTereliminasi = false;
-            
+
                 // Check team supervised by Sofita
                 if (teamSofita.getPesertas().getSize() < 6) {
                     timAkanDieliminasi.add(teamNodeSekarang);
                     timSofitaTereliminasi = true;
                 }
-            
+
                 // Check opponent team
                 if (timLawan_V.getPesertas().getSize() < 6) {
                     timAkanDieliminasi.add(nodeTimLawan);
@@ -339,7 +345,7 @@ public class TP2 {
                         timLawanTereliminasi = true;
                     }
                 }
-            
+
                 // Eliminate teams
                 for (CircularDoublyLinkedList<Kelompok>.TeamNode nodeToRemove : timAkanDieliminasi) {
                     // Check if the team is being supervised by Sofita
@@ -347,31 +353,33 @@ public class TP2 {
                         timSofitaTereliminasi = true;
                         teamNodeSekarang = null; // Will be updated later
                     }
-            
+
                     // Check if the team has the Penjoki
                     if (penjokiNode == nodeToRemove) {
                         timLawanTereliminasi = true;
                         penjokiNode.data.setPenjoki(false); // Remove Penjoki from current team
                         penjokiNode = null; // Will be updated later
                     }
-            
+
                     // Remove the team from the list
                     kelompoks.remove(nodeToRemove);
                 }
-            
-                // If Sofita's team was eliminated, move her to the team with highest total points
+
+                // If Sofita's team was eliminated, move her to the team with highest total
+                // points
                 if (timSofitaTereliminasi && kelompoks.size() > 0) {
                     teamNodeSekarang = getTimDenganPoinTertinggi();
-            
+
                     // Check if Sofita meets the Penjoki
                     if (teamNodeSekarang == penjokiNode && penjokiNode != null) {
                         // Handle Penjoki movement and penalties as in "M" query
                         // Remove Penjoki from current team
                         teamNodeSekarang.data.setPenjoki(false);
-            
+
                         // Find the team with the lowest total points not supervised by Sofita
-                        CircularDoublyLinkedList<Kelompok>.TeamNode lowestTeamNode = getTimDenganPoinTerendah(teamNodeSekarang);
-            
+                        CircularDoublyLinkedList<Kelompok>.TeamNode lowestTeamNode = getTimDenganPoinTerendah(
+                                teamNodeSekarang);
+
                         // Move Penjoki to the new team
                         if (lowestTeamNode != null) {
                             penjokiNode = lowestTeamNode;
@@ -379,7 +387,7 @@ public class TP2 {
                         } else {
                             penjokiNode = null;
                         }
-            
+
                         // Apply penalties to the current team
                         teamNodeSekarang.data.incrementPenjokiTertangkap();
                         int caughtCount = teamNodeSekarang.data.getPenjokiTertangkap();
@@ -398,10 +406,12 @@ public class TP2 {
                         }
                     }
                 }
-            
-                // If Penjoki's team was eliminated, move him to the team with lowest total points
+
+                // If Penjoki's team was eliminated, move him to the team with lowest total
+                // points
                 if (timLawanTereliminasi && kelompoks.size() > 0) {
-                    CircularDoublyLinkedList<Kelompok>.TeamNode lowestTeamNode = getTimDenganPoinTerendah(teamNodeSekarang);
+                    CircularDoublyLinkedList<Kelompok>.TeamNode lowestTeamNode = getTimDenganPoinTerendah(
+                            teamNodeSekarang);
                     if (lowestTeamNode != null) {
                         penjokiNode = lowestTeamNode;
                         penjokiNode.data.setPenjoki(true);
@@ -409,7 +419,7 @@ public class TP2 {
                         penjokiNode = null;
                     }
                 }
-            
+
                 // Step 6: Output the Result
                 if (result == 0) {
                     out.println(player1.getPoin() + " " + player2.getPoin());
@@ -497,7 +507,8 @@ public class TP2 {
                 }
             } else if (query.equals("R")) {
                 // Implement the logic for query "R"
-            } else if (query.equals("J")) {
+            } 
+            else if (query.equals("J")) {
                 String direction = in.next();
                 if (penjokiNode != null) {
                     CircularDoublyLinkedList<Kelompok>.TeamNode targetNode = null;
@@ -605,7 +616,6 @@ public class TP2 {
         public void updateTotalPoints() {
             this.pesertas.updateTotalPoints();
         }
-        
 
         @Override
         public String toString() {
@@ -864,47 +874,48 @@ public class TP2 {
                 node.right = removeRekursif(node.right, id);
             } else {
                 // Node to be deleted
-                totalPoints -= node.peserta.getPoin();
-                size--;
                 if (node.left == null || node.right == null) {
+                    // Node with one child or no child
                     NodePeserta temp = (node.left != null) ? node.left : node.right;
-                    if (temp == null) {
-                        node = null;
-                    } else {
-                        node = temp;
-                    }
+                    totalPoints -= node.peserta.getPoin();
+                    size--;
+                    node = temp;
                 } else {
                     // Node with two children
+                    // Get the inorder successor (smallest in the right subtree)
                     NodePeserta temp = minValueNode(node.right);
+                    // Copy the inorder successor's content to this node
                     node.peserta = temp.peserta;
+                    // Delete the inorder successor
                     node.right = removeRekursif(node.right, temp.peserta.getId());
+                    // Do not decrement size or totalPoints here
                 }
             }
             if (node == null) {
                 return node;
             }
-
+        
             // Update height
             node.height = 1 + Math.max(getTinggiTree(node.left), getTinggiTree(node.right));
-
-            // Seimbang the node
-            int Seimbang = getTreeSeimbang(node);
-
+        
+            // Balance the node
+            int balance = getTreeSeimbang(node);
+        
             // LL
-            if (Seimbang > 1 && getTreeSeimbang(node.left) >= 0) {
+            if (balance > 1 && getTreeSeimbang(node.left) >= 0) {
                 return rotasiTreeKeKanan(node);
             }
             // LR
-            if (Seimbang > 1 && getTreeSeimbang(node.left) < 0) {
+            if (balance > 1 && getTreeSeimbang(node.left) < 0) {
                 node.left = rotasiTreeKeKiri(node.left);
                 return rotasiTreeKeKanan(node);
             }
             // RR
-            if (Seimbang < -1 && getTreeSeimbang(node.right) <= 0) {
+            if (balance < -1 && getTreeSeimbang(node.right) <= 0) {
                 return rotasiTreeKeKiri(node);
             }
             // RL
-            if (Seimbang < -1 && getTreeSeimbang(node.right) > 0) {
+            if (balance < -1 && getTreeSeimbang(node.right) > 0) {
                 node.right = rotasiTreeKeKanan(node.right);
                 return rotasiTreeKeKiri(node);
             }
@@ -922,12 +933,13 @@ public class TP2 {
         public void updateTotalPoints() {
             totalPoints = calculateTotalPoints(root);
         }
-        
+
         private int calculateTotalPoints(NodePeserta node) {
-            if (node == null) return 0;
+            if (node == null)
+                return 0;
             return node.peserta.getPoin() + calculateTotalPoints(node.left) + calculateTotalPoints(node.right);
         }
-        
+
     }
 
     static class CircularDoublyLinkedList<T> {
