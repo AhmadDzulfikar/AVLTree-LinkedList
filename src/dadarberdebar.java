@@ -1,93 +1,93 @@
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.util.ArrayList;
-import java.util.HashSet;
-import java.util.List;
-import java.util.StringTokenizer;
+    import java.io.BufferedReader;
+    import java.io.IOException;
+    import java.io.InputStream;
+    import java.io.InputStreamReader;
+    import java.io.PrintWriter;
+    import java.util.ArrayList;
+    import java.util.HashSet;
+    import java.util.List;
+    import java.util.StringTokenizer;
 
-public class TP2 {
-    private static InputReader in;
-    private static PrintWriter out;
-    private static CircularDoublyLinkedList<Kelompok> kelompoks;
-    private static CircularDoublyLinkedList<Kelompok>.TeamNode teamNodeSekarang;
-    private static CircularDoublyLinkedList<Kelompok>.TeamNode penjokiNode = null;
-    private static int counter = 1;
+    public class dadarberdebar {
+        private static InputReader in;
+        private static PrintWriter out;
+        private static CircularDoublyLinkedList<Kelompok> kelompoks;
+        private static CircularDoublyLinkedList<Kelompok>.TeamNode teamNodeSekarang;
+        private static CircularDoublyLinkedList<Kelompok>.TeamNode penjokiNode = null;
+        private static int counter = 1;
 
-    public static void main(String[] args) {
-        in = new InputReader(System.in);
-        out = new PrintWriter(System.out);
+        public static void main(String[] args) {
+            in = new InputReader(System.in);
+            out = new PrintWriter(System.out);
 
-        // Menentukan jumlah tim
-        int M = in.nextInteger(); // Jumlah query yang akan dijalankan
-        kelompoks = new CircularDoublyLinkedList<>();
+            // Menentukan jumlah tim
+            int M = in.nextInteger(); // Jumlah query yang akan dijalankan
+            kelompoks = new CircularDoublyLinkedList<>();
 
-        // Menentukan jumlah peserta untuk masing-masing tim
-        int[] jumlahPesertaDiTim = new int[M];
-        for (int i = 0; i < M; i++) {
-            jumlahPesertaDiTim[i] = in.nextInteger();
-        }
-
-        // Menentukan total peserta
-        int jumlahPeserta = 0;
-        for (int num : jumlahPesertaDiTim) {
-            jumlahPeserta += num;
-        }
-
-        // Menentukan awalan poin untuk setiap peserta
-        int[] poin = new int[jumlahPeserta];
-        for (int i = 0; i < jumlahPeserta; i++) {
-            poin[i] = in.nextInteger();
-        }
-
-        int indexPoin = 0;
-        for (int i = 0; i < M; i++) {
-            Kelompok kelompok = new Kelompok(i + 1);
-            for (int j = 0; j < jumlahPesertaDiTim[i]; j++) {
-                Peserta peserta = new Peserta(counter++, poin[indexPoin++]);
-                kelompok.addPeserta(peserta);
+            // Menentukan jumlah peserta untuk masing-masing tim
+            int[] jumlahPesertaDiTim = new int[M];
+            for (int i = 0; i < M; i++) {
+                jumlahPesertaDiTim[i] = in.nextInteger();
             }
-            kelompoks.addLast(kelompok);
-        }
 
-        // Inisialisasi tim yang diawasi oleh Sofita
-        // Inisialisasi tim yang diawasi oleh Sofita
-        if (M > 0) {
-            teamNodeSekarang = kelompoks.getHead(); // Sofita starts supervising team 1
+            // Menentukan total peserta
+            int jumlahPeserta = 0;
+            for (int num : jumlahPesertaDiTim) {
+                jumlahPeserta += num;
+            }
 
-            // Find the team with the lowest total points
-            CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = kelompoks.getHead();
-            Kelompok timTerbawah = null;
-            penjokiNode = null; // Reset penjokiNode
+            // Menentukan awalan poin untuk setiap peserta
+            int[] poin = new int[jumlahPeserta];
+            for (int i = 0; i < jumlahPeserta; i++) {
+                poin[i] = in.nextInteger();
+            }
 
-            for (int i = 0; i < kelompoks.size(); i++) {
-                if (tempNode != teamNodeSekarang) {
-                    if (timTerbawah == null
-                            || tempNode.data.getTotalPoinKelompok() < timTerbawah.getTotalPoinKelompok()) {
-                        timTerbawah = tempNode.data;
-                        penjokiNode = tempNode; // Update penjokiNode to the new lowest team
-                    }
+            int indexPoin = 0;
+            for (int i = 0; i < M; i++) {
+                Kelompok kelompok = new Kelompok(i + 1);
+                for (int j = 0; j < jumlahPesertaDiTim[i]; j++) {
+                    Peserta peserta = new Peserta(counter++, poin[indexPoin++]);
+                    kelompok.addPeserta(peserta);
                 }
-                tempNode = tempNode.next;
+                kelompoks.addLast(kelompok);
             }
 
-            // Place the 'Penjoki' on the team with the lowest total points
-            if (penjokiNode != null) {
-                penjokiNode.data.setPenjoki(true);
+            // Inisialisasi tim yang diawasi oleh Sofita
+            // Inisialisasi tim yang diawasi oleh Sofita
+            if (M > 0) {
+                teamNodeSekarang = kelompoks.getHead(); // Sofita starts supervising team 1
+
+                // Find the team with the lowest total points
+                CircularDoublyLinkedList<Kelompok>.TeamNode tempNode = kelompoks.getHead();
+                Kelompok timTerbawah = null;
+                penjokiNode = null; // Reset penjokiNode
+
+                for (int i = 0; i < kelompoks.size(); i++) {
+                    if (tempNode != teamNodeSekarang) {
+                        if (timTerbawah == null
+                                || tempNode.data.getTotalPoinKelompok() < timTerbawah.getTotalPoinKelompok()) {
+                            timTerbawah = tempNode.data;
+                            penjokiNode = tempNode; // Update penjokiNode to the new lowest team
+                        }
+                    }
+                    tempNode = tempNode.next;
+                }
+
+                // Place the 'Penjoki' on the team with the lowest total points
+                if (penjokiNode != null) {
+                    penjokiNode.data.setPenjoki(true);
+                }
+            } else {
+                teamNodeSekarang = null; // No teams exist
             }
-        } else {
-            teamNodeSekarang = null; // No teams exist
-        }
 
-        int idTimSelanjutnya = M + 1;
+            int idTimSelanjutnya = M + 1;
 
-        // Membaca Jumlah Query
-        int Q = in.nextInteger();
+            // Membaca Jumlah Query
+            int Q = in.nextInteger();
 
-        for (int i = 0; i < Q; i++) {
-            String query = in.next();
+            for (int i = 0; i < Q; i++) {
+                String query = in.next();
 
             if (query.equals("A")) {
                 int jumlahPesertaBaru = in.nextInteger();

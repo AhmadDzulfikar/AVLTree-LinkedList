@@ -1365,3 +1365,87 @@ public class TP2 {
         }
     }
 }
+
+can u pls make my "B" query with this provision:
+    B [EXTREME_BOUND]
+    Sofita yang sekarang menginjak semester 3, saat ini sedang belajar mata kuliah statistika. Pada mata kuliah tersebut, dia sangat tertarik dengan materi descriptive statistics, khususnya pada konsep Outlier. Sofita pun ingin menghubungkan ilmu yang telah dipelajarinya dengan materi yang juga sedang dipelajarinya pada mata kuliah SDA. Keluaran akan bergantung pada nilai dari <EXTREME_BOUND>:
+        - Jika EXTREME_BOUND = U : Cari banyaknya peserta pada tim yang sedang diawasi sofita dengan nilai > U
+        - Jika EXTREME_BOUND = L : Cari banyaknya peserta pada tim yang sedang diawasi sofita dengan nilai < L
+        - Penjelasan lebih lanjut tentang variabel U dan L ada dibawah. 
+        Sebagai klarifikasi, berikut cara menghitung nilai L dan U pada kumpulan bilangan:
+        - Urutkan kumpulan bilangan tersebut ke dalam suatu array. Sebut array tersebut adalah A[0.. (K — 1)] (Note: Perhatikan bahwa A terurut menaik, dan ukuran A adalah K.)
+        - Dari Arrray A, dapat dicari beberapa nilai:
+            - IndexQl = max(0, floor(1/4 (K -1)) 
+            - IndexQ3 = min(K — 1, floor((3/4 (k - 1)) (Note: floor() adalah fungsi floor) 
+            - Q1 = A (indexQl)
+            - Q3 = A (indexQ3)
+            - IQR = Q3 — Q1
+            - L = Q1 - [1.5 * IQR]
+            - U = Q3 + [1.5 * IQR]
+    - Sofitanya gaboleh NULL 
+    - Pastiin poinnya beneran sorted and ga include poin peserta yang ga ke elim 
+    - Pastiin indexQ1 sama indexQ3 persis sama rumusnya, sama L sama U nya juga pastiin indexinnya bener 
+
+
+    OUTPUT/keluaran query B
+    - Cetak jumlah peserta yang memenuhi syarat yang ditentukan Sofita
+
+CONTOH INPUT:
+3 
+8 10 8
+4 3 2 3 2 1 2 4 7 8 9 8 9 22 7 10 10 10 2 5 6 8 9 10 30 5
+7
+J L
+T 21 3 2
+V 1 4 1 1
+R
+R
+A 3
+B U
+ 
+
+# Contoh Keluaran 2
+ 
+2
+-1
+7
+2
+3
+11
+1
+
+PENJELASAN:
+Kondisi Awal
+Terdapat 3 tim dengan masing-masing jumlah 8, 10, 8 dengan jumlah masing-masing poin sesuai dengan poin yang diinput. Sofita berada pada tim nomor 1, sementara Joki akan berada pada tim dengan poin paling rendah. Pada kasus ini, poin tim 1 adalah 21, tim 2 adalah 100, dan tim 3 adalah 75. Seharusnya, Joki berada pada posisi tim 1 yang memiliki poin paling rendah. Karena Joki tahu bahwa pada tim tersebut sedang diawasi oleh Sofita. Maka la pindah ke tim 3 sebagai tim dengan poin terendah kedua.
+
+1. J L
+Joki melakukan perpindahan ke kiri. Cetak ID timnya 2
+
+2. T 21 3 2
+Dilakukan kueri untuk pemindahan poin dengan ID pengirim 21 dan penerima 2. Hal tersebut memang dapat dilakukan mengingat poin dari ID pengirim cukup untuk diberikan. Namun, perlu diingat bahwa sofita tidak berada pada tim 3. Sehingga cetak -1.
+
+3. V 1 4 1
+Dilakukan pertandingan dengan hasil menang untuk peserta 1. Artinya, peserta dengan ID 1 mendapatkan 3 poin, sehingga ponnya menjadi 7. Maka cetak 7. Sementara peserta 2 kehilangan 3 poinnya. Maka peserta dengan ID 4 poinnya 0. Oh tidak! la akan segera dieliminasi.
+
+Hasil akhir setelah dilakukan kueri. Tim 1 berisi 7 orang karena adanya eliminasi pada peserta dengan ID 4.
+
+4. R
+
+Terjadi pengurutan tim berdasarkan tim dengan poin tertinggi berada pada sebelah kiri, hal ini juga termasuk perpindahan Sofita. Dan terjadi lagi~~ pertemuan Sofita dengan Joki. Perlu dilakukan pengeluaran 3 peserta tertinggi pada tim 2. Cetak ID posisi Sofita sekarang, 2.
+Pada tim 2, poin dengan nilai 22, 10, dan 10 dikeluarkan dalam tim, sehingga jumlah peserta pada tim 2 tersisa 7. Hal tersebut masih valid untuk jumlah peserta satu tim.
+Hasil setelah kueri R dilakukan, posisi Joki akan pindah pada tim dengan poin terendah. Saat ini, poin tim 3 adalah 75, poin tim 2 adalah 58, sementara poin tim 1 adalah 21. Maka posisi akhir joki berada pada tim 1.
+
+6. R
+Terjadi lagi pengurutan tim. Saat ini, poin tim 1 adalah 21, poin tim 2 adalah 58, sementara poin tim 3 adalah 75. Maka posisi akhir Sofita berada pada tim dengan poin tertinggi yaitu tim 3. Cetak ID tim, 3.
+
+6. A 3
+Terdapat penambahan 3 peserta pada tim 3 dengan masing-masing inisialisasi poin 3. Cetak banyak jumlah peserta pada tim 3, 11.
+
+7. B U
+Pada kueri ini dicari batas atas. Perhitungan akan sebagai berikut,
+- Index Q1 = max(0, floor(1/4(11-1)) = max(0, floor(2.5)) = 2
+- Index Q3 = min(11 - 1, floor (3/4(11 - 1)) = min (10,[7.5]) = 7
+- Data terurut = 2, 3, 3, 3, 5, 5, 6, 8, 9, 10, 30
+diketahui bahwa Q1 dari data adalah 3 dan Q3 adalah 8. Maka didapatkan IQR sebesar 5. Batas atas dari tim ini adalah 
+U = Q3 + floor(1.5 * IQR) = 8 + floor(1.5 * 5) = 15
+Banyaknya peserta pada tim yang sedang
