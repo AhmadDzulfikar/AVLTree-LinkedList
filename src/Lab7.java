@@ -1,7 +1,7 @@
 import java.util.*;
 import java.io.*;
 
-public class Lab7_T {
+public class Lab7 {
     private static InputReader in;
     private static PrintWriter out;
     private static FilmHeap heap;
@@ -63,8 +63,30 @@ public class Lab7_T {
                     break;
 
                 case "K":
+                    // Membaca jumlah vote yang akan dikurangi
                     vote = in.nextLong();
-                    // TODO: Implementasi untuk query K
+
+                    // Mendapatkan film dengan jumlah vote terbanyak
+                    Film topFilmK = heap.peek();
+
+                    if (topFilmK != null) {
+                        // Mengurangi vote film teratas
+                        topFilmK.vote -= vote;
+
+                        // Memperbarui posisi film dalam heap
+                        heap.updateFilm(topFilmK.id);
+
+                        // Mendapatkan film dengan jumlah vote terbanyak setelah pengurangan
+                        Film newTopFilm = heap.peek();
+
+                        if (newTopFilm != null) {
+                            out.println(newTopFilm.id + " " + newTopFilm.vote);
+                        } else {
+                            out.println("-1 -1");
+                        }
+                    } else {
+                        out.println("-1 -1"); // Heap kosong
+                    }
                     break;
 
                 case "R":
@@ -103,7 +125,6 @@ public class Lab7_T {
             }
             return Integer.compare(other.id, this.id); // Ascending order of IDs: lower ID is "greater"
         }
-        
     }
 
     static class FilmHeap {
@@ -132,7 +153,7 @@ public class Lab7_T {
         public void percolateUp(int i) {
             while (i > 0) {
                 int parent = getParentIndex(i);
-                if (heap.get(i).compareTo(heap.get(parent)) < 0) {
+                if (heap.get(i).compareTo(heap.get(parent)) <= 0) { // Mengubah < 0 menjadi <= 0
                     break;
                 }
                 swap(i, parent);
