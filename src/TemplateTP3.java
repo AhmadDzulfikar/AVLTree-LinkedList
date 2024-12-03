@@ -1,16 +1,7 @@
 import java.io.*;
 import java.util.*;
 
-public class TP3 {
-
-/*====================================***=====================================*\
-->->->->->->->->->->->->->->->->->->->-><-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-
-
-|------------------------------------ FIELDS -----------------------------------|
-
-->->->->->->->->->->->->->->->->->->->-><-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-<-
-\*============================================================================*/
-
+public class TemplateTP3 {
     private static InputReader in;
     private static PrintWriter out;
 
@@ -105,8 +96,8 @@ public class TP3 {
 
         public Graph(int V) {
             this.V = V;
-            adjList = new ArrayList[V + 1];
-            for (int i = 1; i <= V; i++) {
+            adjList = new ArrayList[V];
+            for (int i = 0; i < V; i++) {
                 adjList[i] = new ArrayList<>();
             }
         }
@@ -118,25 +109,7 @@ public class TP3 {
 
         public long maksimalKotaYangDapatDitempuh(long kekuatan) {
             // Implementasikan algoritma BFS/DFS untuk mencari jumlah kota maksimum yang dapat dikunjungi
-            boolean[] dikunjungi = new boolean[V + 1];
-
-            Queue<Integer> queue = new LinkedList<>();
-            int start = 1; // Mulai dari kota pertama
-            dikunjungi[start] = true;
-            queue.offer(start);
-            int count = 0;
-
-            while (!queue.isEmpty()) {
-                int u = queue.poll();
-                for (Edge edge : adjList[u]) {
-                    if (edge.weight <= kekuatan && !dikunjungi[edge.to]) {
-                        dikunjungi[edge.to] = true;
-                        queue.offer(edge.to);
-                        count++;
-                    }
-                }
-            }
-            return count > 0 ? count : -1; // Ganti dengan implementasi
+            return -1; // Ganti dengan implementasi
         }
 
         public long kotaJarakTerpendek(int targetKota) {
