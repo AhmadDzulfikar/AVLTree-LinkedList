@@ -100,6 +100,7 @@ public class TP3CobaM {
         private int V;
         private List<Edge>[] adjList;
         private String currentPassword;
+        private int currentCity; // Menambahkan variabel untuk melacak lokasi saat ini
 
         public Graph(int V) {
             this.V = V;
@@ -108,6 +109,7 @@ public class TP3CobaM {
                 adjList[i] = new ArrayList<>();
             }
             currentPassword = "0000"; // Initialize the current password
+            currentCity = 1; // Inisialisasi lokasi awal ke kota 1
         }
 
         public void addEdge(int u, int v, long weight) {
@@ -123,7 +125,7 @@ public class TP3CobaM {
             int start = 1; // Mulai dari kota pertama
             dikunjungi[start] = true;
             queue.offer(start);
-            int count = 0; // Start from 1 since we have visited the starting city
+            int count = 0; // Start from 0 to exclude the starting city
 
             while (!queue.isEmpty()) {
                 int u = queue.poll();
@@ -141,10 +143,10 @@ public class TP3CobaM {
         public long kotaJarakTerpendek(int targetKota) {
             long[] jarak = new long[V + 1];
             Arrays.fill(jarak, Long.MAX_VALUE);
-            jarak[1] = 0;
+            jarak[currentCity] = 0;
 
             PriorityQueue<Edge> pq = new PriorityQueue<>((a, b) -> Long.compare(a.weight, b.weight));
-            pq.offer(new Edge(1, 0));
+            pq.offer(new Edge(currentCity, 0));
 
             while (!pq.isEmpty()) {
                 Edge current = pq.poll();
@@ -172,6 +174,9 @@ public class TP3CobaM {
         }
 
         public int minPasswordCombinations(int id, int[] digitPasswordRumah, int password) {
+            // Set lokasi saat ini ke id yang diberikan
+            currentCity = id;
+
             // Convert the target password to a 4-digit string with leading zeros
             String targetPasswordStr = String.format("%04d", password);
 
@@ -230,7 +235,7 @@ public class TP3CobaM {
 
         public long totalShortestDistance(int kotaRespawnSofita) {
             // Implementasikan algoritma untuk mencari total jarak terpendek yang menyambungkan seluruh kota
-            // Since the problem description is not complete for this query, returning -1
+            // Karena deskripsi masalah untuk query ini tidak lengkap, mengembalikan -1
             return -1;
         }
     }
