@@ -122,10 +122,10 @@ public class TP3CobaM {
             boolean[] dikunjungi = new boolean[V + 1];
 
             Queue<Integer> queue = new LinkedList<>();
-            int start = 1; // Mulai dari kota pertama
+            int start = currentCity; // Mulai dari kota saat ini
             dikunjungi[start] = true;
             queue.offer(start);
-            int count = 0; // Start from 0 to exclude the starting city
+            int count = 0; // Start from 0 to count cities other than starting city
 
             while (!queue.isEmpty()) {
                 int u = queue.poll();
@@ -137,7 +137,14 @@ public class TP3CobaM {
                     }
                 }
             }
-            return count > 0 ? count : -1;
+
+            // Kembalikan jumlah kota yang dikunjungi, tidak termasuk kota awal
+            if (count > 0) {
+                return count;
+            } else {
+                // Jika tidak ada kota lain yang dapat dikunjungi
+                return -1;
+            }
         }
 
         public long kotaJarakTerpendek(int targetKota) {
