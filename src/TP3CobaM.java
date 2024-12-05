@@ -113,8 +113,8 @@ public class TP3CobaM {
         }
 
         public void addEdge(int u, int v, long weight) {
-            adjList[u].add(new Edge(v, weight));
-            adjList[v].add(new Edge(u, weight));
+            adjList[u].add(new Edge(u, v, weight));
+            adjList[v].add(new Edge(v, u, weight));
         }
 
         public long maksimalKotaYangDapatDitempuh(long kekuatan) {
@@ -130,9 +130,11 @@ public class TP3CobaM {
             while (!queue.isEmpty()) {
                 int u = queue.poll();
                 for (Edge edge : adjList[u]) {
-                    if (edge.weight <= kekuatan && !dikunjungi[edge.to]) {
-                        dikunjungi[edge.to] = true;
-                        queue.offer(edge.to);
+                    int v = edge.v;
+                    long weight = edge.weight;
+                    if (weight <= kekuatan && !dikunjungi[v]) {
+                        dikunjungi[v] = true;
+                        queue.offer(v);
                         count++;
                     }
                 }
@@ -153,11 +155,11 @@ public class TP3CobaM {
             jarak[currentCity] = 0;
 
             PriorityQueue<Edge> pq = new PriorityQueue<>((a, b) -> Long.compare(a.weight, b.weight));
-            pq.offer(new Edge(currentCity, 0));
+            pq.offer(new Edge(currentCity, currentCity, 0));
 
             while (!pq.isEmpty()) {
                 Edge current = pq.poll();
-                int kotaSaatIni = current.to;
+                int kotaSaatIni = current.v;
                 long jarakSaatIni = current.weight;
 
                 if (kotaSaatIni == targetKota) {
@@ -169,11 +171,13 @@ public class TP3CobaM {
                 }
 
                 for (Edge tetangga : adjList[kotaSaatIni]) {
-                    long jarakBaru = jarakSaatIni + tetangga.weight;
+                    int v = tetangga.v;
+                    long w = tetangga.weight;
+                    long jarakBaru = jarakSaatIni + w;
 
-                    if (jarakBaru < jarak[tetangga.to]) {
-                        jarak[tetangga.to] = jarakBaru;
-                        pq.offer(new Edge(tetangga.to, jarakBaru));
+                    if (jarakBaru < jarak[v]) {
+                        jarak[v] = jarakBaru;
+                        pq.offer(new Edge(currentCity, v, jarakBaru));
                     }
                 }
             }
@@ -241,18 +245,110 @@ public class TP3CobaM {
         }
 
         public long totalShortestDistance(int kotaRespawnSofita) {
-            // Implementasikan algoritma untuk mencari total jarak terpendek yang menyambungkan seluruh kota
-            // Karena deskripsi masalah untuk query ini tidak lengkap, mengembalikan -1
-            return -1;
+            List<EdgeMST> allEdges = new ArrayList<>();
+
+            // Kumpulkan semua jalan unik
+            for (int u = 1; u <= V; u++) {
+                for (Edge edge : adjList[u]) {
+                    int v = edge.v;
+                    long weight = edge.weight;
+                    if (u < v) { // Pastikan setiap jalan hanya dihitung sekali
+                        allEdges.add(new EdgeMST(u, v, weight));
+                    }
+                }
+            }
+
+            // Pisahkan jalan yang terhubung langsung dengan kotaRespawnSofita
+            List<EdgeMST> connected = new ArrayList<>();
+            List<EdgeMST> others = new ArrayList<>();
+
+            for (EdgeMST edge : allEdges) {
+                if (edge.u == kotaRespawnSofita || edge.v == kotaRespawnSofita) {
+                    connected.add(edge);
+                } else {
+                    others.add(edge);
+                }
+            }
+
+            // Urutkan jalan yang terhubung langsung dengan kotaRespawnSofita berdasarkan bobot ascending
+            connected.sort(Comparator.comparingLong(e -> e.weight));
+
+            // Urutkan jalan lainnya berdasarkan bobot ascending
+            others.sort(Comparator.comparingLong(e -> e.weight));
+
+            // Gabungkan jalan: jalan yang terhubung langsung dengan kotaRespawnSofita terlebih dahulu
+            List<EdgeMST> sortedEdges = new ArrayList<>();
+            sortedEdges.addAll(connected);
+            sortedEdges.addAll(others);
+
+            // Implementasikan Union-Find
+            int[] parent = new int[V + 1];
+            for (int i = 1; i <= V; i++) {
+                parent[i] = i;
+            }
+
+            long totalSum = 0;
+            int edgesUsed = 0;
+
+            for (EdgeMST edge : sortedEdges) {
+                int u = edge.u;
+                int v = edge.v;
+                long w = edge.weight;
+
+                int pu = find(parent, u);
+                int pv = find(parent, v);
+
+                if (pu != pv) {
+                    parent[pu] = pv;
+                    totalSum += w;
+                    edgesUsed++;
+                    if (edgesUsed == V - 1) {
+                        break;
+                    }
+                }
+            }
+
+            // Periksa apakah semua kota terhubung
+            int root = find(parent, 1);
+            for (int i = 2; i <= V; i++) {
+                if (find(parent, i) != root) {
+                    return -1;
+                }
+            }
+
+            return totalSum;
+        }
+
+        private int find(int[] parent, int x) {
+            if (parent[x] != x) {
+                parent[x] = find(parent, parent[x]);
+            }
+            return parent[x];
+        }
+
+        // Kelas khusus untuk MST dengan atribut u, v, weight
+        static class EdgeMST {
+            int u;
+            int v;
+            long weight;
+
+            public EdgeMST(int u, int v, long weight) {
+                this.u = u;
+                this.v = v;
+                this.weight = weight;
+            }
         }
     }
 
+    // Kelas Edge yang diperbarui dengan atribut u dan v
     static class Edge {
-        int to;
+        int u;
+        int v;
         long weight;
 
-        public Edge(int to, long weight) {
-            this.to = to;
+        public Edge(int u, int v, long weight) {
+            this.u = u;
+            this.v = v;
             this.weight = weight;
         }
     }
